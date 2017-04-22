@@ -35,10 +35,34 @@ int main(){
 	cout << ", m'=";
 	mpz_out_str(stdout, 10, plaintext->m);
 	cout << endl;
+	// Make another random message.
+	unsigned long int m2 = rand();
+	cout << "m_2=" << m2;
+	paillier_plaintext_t* plaintext2 = paillier_plaintext_from_ui(m2);
+	// Encrypt it multiply it with the first plaintext. This will test homomorphic addition.
+	paillier_ciphertext_t* ciphertext2 = paillier_enc(NULL, pub, plaintext2, paillier_get_rand_devurandom);
+	paillier_ciphertext_t* product = new paillier_ciphertext_t();
+	paillier_mul(pub, product, ciphertext, ciphertext2);
+	// Add the plaintexts without any crypto. This is plain old addition.
+	mpz_t sum_plain;
+	mpz_init(sum_plain);
+	mpz_add(sum_plain, plaintext->m, plaintext2->m);
+	mpz_mod(sum_plain, sum_plain, pub->n);
+	cout << ", (m'+m_2) mod n=";
+	mpz_out_str(stdout, 10, sum_plain);
+	// Decrypt the product of the ciphertexts to get the sum of the plaintexts.
+	paillier_plaintext_t* sum = paillier_dec(NULL, pub, prv, product);
+	cout << ", D(E(m')*E(m_2) mod n^2)=";
+	mpz_out_str(stdout, 10, sum->m);
+	cout << endl;
 	// Clean up.
 	free(pub);
 	free(prv);
 	free(ciphertext);
 	free(plaintext);
+	free(ciphertext2);
+	free(plaintext2);
+	free(sum);
+	delete product;
 	return 0;
 }

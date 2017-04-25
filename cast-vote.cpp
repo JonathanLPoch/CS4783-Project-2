@@ -13,12 +13,12 @@ int main(){
 		return 1;
 	}
 	char pubHex[KEY_LENGTH_HEX + 1];
-	int numCandidates, numVoters;
+	int numCandidates, numVotersPlusOne;
 	ifspub.getline(pubHex, KEY_LENGTH_HEX + 1);
 	ifspub >> numCandidates;
-	ifspub >> numVoters;
+	ifspub >> numVotersPlusOne;
 	ifspub.close();
-	if(numCandidates < 2 || numVoters < 2){
+	if(numCandidates < 2 || numVotersPlusOne < 2){
 		cerr << "The numbers of candidates and of voters are corrupt.\n";
 		return 2;
 	}
@@ -72,7 +72,7 @@ int main(){
 	}while(confirmation != 'y' && confirmation != 'Y');
 	cout << '\n';
 	// The vote is stored as {number of voters}^{# of candidate - 1}.
-	paillier_plaintext_t* ptVote = paillier_plaintext_from_ui(numVoters);
+	paillier_plaintext_t* ptVote = paillier_plaintext_from_ui(numVotersPlusOne);
 	mpz_pow_ui(ptVote->m, ptVote->m, zCandidate - 1);
 	// Encrypt the vote.
 	paillier_ciphertext_t* ctVote = paillier_enc(NULL, pub, ptVote, paillier_get_rand_devurandom);

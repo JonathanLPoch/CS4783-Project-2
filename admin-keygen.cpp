@@ -25,7 +25,7 @@ int main(){
 	ofstream ofspub(KEY_FILE_PUBLIC);
 	if(ofspub){
 		ofspub << paillier_pubkey_to_hex(pub) << endl;
-		ofspub << numCandidates << '\n' << numVoters << endl;
+		ofspub << numCandidates << '\n' << (numVoters + 1) << endl;
 		ofspub.close();
 	}else{
 		cerr << "Warning: could not write file for public key.\n";

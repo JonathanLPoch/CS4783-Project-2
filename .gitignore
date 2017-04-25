@@ -28,3 +28,9 @@
 *.out
 *.app
 tests
+cast-vote
+admin-keygen
+
+# Configuration files
+private-key.txt
+public-key.txt

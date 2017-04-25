@@ -5,17 +5,6 @@
 using namespace std;
 
 int main(){
-	// char x[] = "Test";
-	// paillier_ciphertext_t* xe = paillier_ciphertext_from_bytes(x, 4);
-	// cout << ciphertext_base64(xe) << endl;
-	// mpz_t xh;
-	// ciphertext_sha256(xh, xe);
-	// mpz_out_str(stdout, 16, xh);
-	// cout << endl;
-	// ciphertext_sha256(xh, xe);
-	// mpz_out_str(stdout, 16, xh);
-	// cout << endl;
-	// cout << "It works!" << endl;
 	cout << "Welcome! ";
 	// Read the public key from a file.
 	ifstream ifspub(KEY_FILE_PUBLIC);
@@ -85,12 +74,9 @@ int main(){
 	// The vote is stored as {number of voters}^{# of candidate - 1}.
 	paillier_plaintext_t* ptVote = paillier_plaintext_from_ui(numVoters);
 	mpz_pow_ui(ptVote->m, ptVote->m, zCandidate - 1);
-	// cout << "Your vote is encoded (but not encrypted) as: ";
-	// mpz_out_str(stdout, 10, ptVote->m);
-	// cout << '\n' << endl;
 	// Encrypt the vote.
 	paillier_ciphertext_t* ctVote = paillier_enc(NULL, pub, ptVote, paillier_get_rand_devurandom);
-	cout << "---BEGIN:BALLOT---\n" << ciphertext_base64(ctVote) << "----END:BALLOT----" << endl;
+	cout << "BEGIN:BALLOT\n" << ciphertext_base64(ctVote) << "END:BALLOT" << endl;
 	// Get the SHA-256 sum of the ciphertext.
 	mpz_t checksum;
 	ciphertext_sha256(checksum, ctVote);
@@ -100,7 +86,7 @@ int main(){
 	mpz_add(ptAuthentic->m, ptAuthentic->m, checksum);
 	// Encrypt the authenticity value.
 	paillier_ciphertext_t* ctAuthentic = paillier_enc(NULL, pub, ptAuthentic, paillier_get_rand_devurandom);
-	cout << "---BEGIN:MAC---\n" << ciphertext_base64(ctAuthentic) << "----END:MAC----" << endl;
+	cout << "BEGIN:MAC\n" << ciphertext_base64(ctAuthentic) << "END:MAC" << endl;
 	// Clean up.
 	// TODO: also clean up when something fails above
 	mpz_clear(zVoterToken);

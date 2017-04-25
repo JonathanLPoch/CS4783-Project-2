@@ -9,7 +9,7 @@ string ciphertext_base64(paillier_ciphertext_t* ciphertext){
 	byte* ct_as_bytes = (byte*)mpz_export(NULL, &ct_as_bytes_length, 1, 1, 1, 0, ciphertext->c);
 	// Convert the bytes to base 64.
 	string encoded;
-	StringSource ss(ct_as_bytes, EXPORTED_CIPHERTEXT_SIZE_BYTES, true, new Base64Encoder(new StringSink(encoded)));
+	StringSource ss(ct_as_bytes, EXPORTED_CIPHERTEXT_SIZE_BYTES, true, new Base64Encoder(new StringSink(encoded), true, 100));
 	// Clean up.
 	free(ct_as_bytes);
 	return encoded;

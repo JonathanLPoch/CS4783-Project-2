@@ -1,28 +1,43 @@
-#include <fstream>
 #include <iostream>
 #include <string>
 #include "CryptoCommon.h"
 using namespace std;
 
+// Removes hyphens from a voter token from stdin.
+// Returns false if non-numeric characters other than hyphens are found.
+bool sanitize_voter_token(string& str_voter_token){
+	// Allocate a character array.
+	char* temp = (char*) malloc(str_voter_token.size() + 1);
+	size_t i = 0;
+	// Copy numeric characters to the character array.
+	for(char c : str_voter_token){
+		if('0' <= c && c <= '9'){
+			// This is a numeric character.
+			temp[i++] = c;
+		}else if(c != '-'){
+			// This is not a numeric character, and it is not a hyphen.
+			free(temp);
+			return false;
+		}
+	}
+	// Terminate the character array.
+	temp[i] = 0;
+	// Set the original string to the string version of this character array.
+	str_voter_token = temp;
+	// Clean up.
+	free(temp);
+	return true;
+}
+
 int main(){
 	cout << "Welcome! ";
 	// Read the public key from a file.
-	ifstream ifspub(KEY_FILE_PUBLIC);
-	if(!ifspub){
-		cerr << "Error: could not read public key file.\n";
-		return 1;
-	}
-	char pubHex[KEY_LENGTH_HEX + 1];
 	int numCandidates, numVotersPlusOne;
-	ifspub.getline(pubHex, KEY_LENGTH_HEX + 1);
-	ifspub >> numCandidates;
-	ifspub >> numVotersPlusOne;
-	ifspub.close();
-	if(numCandidates < 2 || numVotersPlusOne < 2){
-		cerr << "The numbers of candidates and of voters are corrupt.\n";
+	paillier_pubkey_t* pub;
+	if(!read_pubkey_from_file(numCandidates, numVotersPlusOne, &pub)){
+		cerr << "The public key file is missing or corrupt.\n";
 		return 2;
 	}
-	paillier_pubkey_t* pub = paillier_pubkey_from_hex(pubHex);
 	// Prompt the user for the voter token. The token should be represented as a base 10 number.
 	// There may be dashes every few digits to make it easier for the user to enter, but they
 	// will be removed from the string here.
@@ -76,7 +91,7 @@ int main(){
 	mpz_pow_ui(ptVote->m, ptVote->m, zCandidate - 1);
 	// Encrypt the vote.
 	paillier_ciphertext_t* ctVote = paillier_enc(NULL, pub, ptVote, paillier_get_rand_devurandom);
-	cout << "BEGIN:BALLOT\n" << ciphertext_base64(ctVote) << "END:BALLOT" << endl;
+	cout << "BEGIN:ENVELOPE\nBEGIN:BALLOT\n" << ciphertext_base64(ctVote) << "END:BALLOT" << endl;
 	// Get the SHA-256 sum of the ciphertext.
 	mpz_t checksum;
 	ciphertext_sha256(checksum, ctVote);
@@ -86,7 +101,7 @@ int main(){
 	mpz_add(ptAuthentic->m, ptAuthentic->m, checksum);
 	// Encrypt the authenticity value.
 	paillier_ciphertext_t* ctAuthentic = paillier_enc(NULL, pub, ptAuthentic, paillier_get_rand_devurandom);
-	cout << "BEGIN:MAC\n" << ciphertext_base64(ctAuthentic) << "END:MAC" << endl;
+	cout << "BEGIN:MAC\n" << ciphertext_base64(ctAuthentic) << "END:MAC\nEND:ENVELOPE" << endl;
 	// Clean up.
 	// TODO: also clean up when something fails above
 	mpz_clear(zVoterToken);

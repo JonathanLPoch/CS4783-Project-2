@@ -1,3 +1,4 @@
+#include <fstream>
 #include "CryptoCommon.h"
 #define EXPORTED_CIPHERTEXT_SIZE_BYTES PAILLIER_BITS_TO_BYTES(KEY_LENGTH)
 using namespace std;
@@ -29,26 +30,19 @@ void ciphertext_sha256(mpz_t& rop, paillier_ciphertext_t* ciphertext){
 	free(ct_as_bytes);
 }
 
-bool sanitize_voter_token(string& str_voter_token){
-	// Allocate a character array.
-	char* temp = (char*) malloc(str_voter_token.size() + 1);
-	size_t i = 0;
-	// Copy numeric characters to the character array.
-	for(char c : str_voter_token){
-		if('0' <= c && c <= '9'){
-			// This is a numeric character.
-			temp[i++] = c;
-		}else if(c != '-'){
-			// This is not a numeric character, and it is not a hyphen.
-			free(temp);
-			return false;
-		}
+bool read_pubkey_from_file(int& numCandidates, int& numVotersPlusOne, paillier_pubkey_t** pub){
+	ifstream ifspub(KEY_FILE_PUBLIC);
+	if(!ifspub){
+		return false;
 	}
-	// Terminate the character array.
-	temp[i] = 0;
-	// Set the original string to the string version of this character array.
-	str_voter_token = temp;
-	// Clean up.
-	free(temp);
+	char pubHex[KEY_LENGTH_HEX + 1];
+	ifspub.getline(pubHex, KEY_LENGTH_HEX + 1);
+	ifspub >> numCandidates;
+	ifspub >> numVotersPlusOne;
+	ifspub.close();
+	if(numCandidates < 2 || numVotersPlusOne < 2){
+		return false;
+	}
+	*pub = paillier_pubkey_from_hex(pubHex);
 	return true;
 }

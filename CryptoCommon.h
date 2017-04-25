@@ -16,6 +16,5 @@ std::string ciphertext_base64(paillier_ciphertext_t* ciphertext);
 // Sets rop to a GMP integer of the SHA-256 digest of a ciphertext.
 void ciphertext_sha256(mpz_t& rop, paillier_ciphertext_t* ciphertext);
 
-// Removes hyphens from a voter token from stdin.
-// Returns false if non-numeric characters other than hyphens are found.
-bool sanitize_voter_token(std::string& str_voter_token);
+// Reads the public key as well as the numbers of voters and candidates from a file.
+bool read_pubkey_from_file(int& numCandidates, int& numVotersPlusOne, paillier_pubkey_t** pub);

@@ -30,6 +30,7 @@
 tests
 cast-vote
 admin-keygen
+admin-tokens
 
 # Configuration files
 private-key.txt

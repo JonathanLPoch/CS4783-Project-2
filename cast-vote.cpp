@@ -3,32 +3,6 @@
 #include "CryptoCommon.h"
 using namespace std;
 
-// Removes hyphens from a voter token from stdin.
-// Returns false if non-numeric characters other than hyphens are found.
-bool sanitize_voter_token(string& str_voter_token){
-	// Allocate a character array.
-	char* temp = (char*) malloc(str_voter_token.size() + 1);
-	size_t i = 0;
-	// Copy numeric characters to the character array.
-	for(char c : str_voter_token){
-		if('0' <= c && c <= '9'){
-			// This is a numeric character.
-			temp[i++] = c;
-		}else if(c != '-'){
-			// This is not a numeric character, and it is not a hyphen.
-			free(temp);
-			return false;
-		}
-	}
-	// Terminate the character array.
-	temp[i] = 0;
-	// Set the original string to the string version of this character array.
-	str_voter_token = temp;
-	// Clean up.
-	free(temp);
-	return true;
-}
-
 int main(){
 	cout << "Welcome! ";
 	// Read the public key from a file.
@@ -86,7 +60,7 @@ int main(){
 		while(cin.get() != '\n');
 	}while(confirmation != 'y' && confirmation != 'Y');
 	cout << '\n';
-	// The vote is stored as {number of voters}^{# of candidate - 1}.
+	// The vote is stored as {number of voters + 1}^{# of candidate - 1}.
 	paillier_plaintext_t* ptVote = paillier_plaintext_from_ui(numVotersPlusOne);
 	mpz_pow_ui(ptVote->m, ptVote->m, zCandidate - 1);
 	// Encrypt the vote.

@@ -63,7 +63,7 @@ int main(){
 		return 2;
 	}
 	// Read the tokens from a file.
-	unordered_set<string> tokens;
+	unordered_set<string> tokens, tokens_used;
 	if(!read_tokens_file(tokens)){
 		cerr << "The file containing tokens is missing.\n";
 		return 3;
@@ -119,15 +119,22 @@ int main(){
 								mpz_init(zTokenFromVoter);
 								mpz_tdiv_q_2exp(zTokenFromVoter, ptAuthentic->m, 256);
 								// Check that the token is in the set of valid tokens.
-								if(tokens.find(mpz_to_bytes(zTokenFromVoter)) != tokens.end()){
-									// For now, just show the decrypted vote.
-									// TODO: do the vote tallying
-									// TODO: make token as used
-									paillier_plaintext_t* ptVote = paillier_dec(NULL, pub, prv, ctVote);
-									cout << "Vote: ";
-									mpz_out_str(stdout, 10, ptVote->m);
-									cout << '\n';
-									paillier_freeplaintext(ptVote);
+								string bTokenFromVoter = mpz_to_bytes(zTokenFromVoter);
+								if(tokens.find(bTokenFromVoter) != tokens.end()){
+									// Check that the token has not been used already.
+									if(tokens_used.find(bTokenFromVoter) == tokens_used.end()){
+										// Mark this token as used.
+										tokens_used.insert(bTokenFromVoter);
+										// For now, just show the decrypted vote.
+										// TODO: do the vote tallying
+										paillier_plaintext_t* ptVote = paillier_dec(NULL, pub, prv, ctVote);
+										cout << "Vote: ";
+										mpz_out_str(stdout, 10, ptVote->m);
+										cout << '\n';
+										paillier_freeplaintext(ptVote);
+									}else{
+										cerr << "Breach: line " << line_num << ": this token has already been used\n";
+									}
 								}else{
 									cerr << "Breach: line " << line_num << ": the token is not in the set of valid tokens\n";
 								}

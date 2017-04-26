@@ -1,7 +1,4 @@
 #include <string>
-#include <cryptopp/cryptlib.h>
-#include <cryptopp/sha.h>
-#include <cryptopp/base64.h>
 #include <gmp.h>
 #include "paillier.h"
 #define KEY_LENGTH 2048

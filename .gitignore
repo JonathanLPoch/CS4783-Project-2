@@ -35,3 +35,4 @@ admin-tokens
 # Configuration files
 private-key.txt
 public-key.txt
+tokens.txt

@@ -9,6 +9,7 @@
 #define TOKEN_LENGTH KEY_LENGTH - 256
 #define KEY_FILE_PUBLIC "public-key.txt"
 #define KEY_FILE_PRIVATE "private-key.txt"
+#define TOKEN_FILE "tokens.txt"
 
 // Converts a ciphertext into a base 64 string.
 std::string ciphertext_base64(paillier_ciphertext_t* ciphertext);

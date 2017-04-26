@@ -72,6 +72,10 @@ int main(){
 	mpz_t z2to256;
 	mpz_init_set_ui(z2to256, 1);
 	mpz_mul_2exp(z2to256, z2to256, 256);
+	// This variable will accumulate the election results.
+	// The Paillier cryptosystem has additive homomorphism. A product of two ciphertexts is equal to the ciphertext of the sum of the two plaintexts.
+	// Every ballot will be multiplied with this variable.
+	paillier_ciphertext_t* product = paillier_create_enc_zero();
 	// Start tallying votes from standard input.
 	cerr << "Reading votes from stdin...\n";
 	stack<string> began_sections;
@@ -125,13 +129,8 @@ int main(){
 									if(tokens_used.find(bTokenFromVoter) == tokens_used.end()){
 										// Mark this token as used.
 										tokens_used.insert(bTokenFromVoter);
-										// For now, just show the decrypted vote.
-										// TODO: do the vote tallying
-										paillier_plaintext_t* ptVote = paillier_dec(NULL, pub, prv, ctVote);
-										cout << "Vote: ";
-										mpz_out_str(stdout, 10, ptVote->m);
-										cout << '\n';
-										paillier_freeplaintext(ptVote);
+										// This ballot has been validated and should be accepted. It will now be counted in the election results.
+										paillier_mul(pub, product, product, ctVote);
 									}else{
 										cerr << "Breach: line " << line_num << ": this token has already been used\n";
 									}
@@ -171,5 +170,43 @@ int main(){
 		}
 	}
 	mpz_clear(z2to256);
+	cout << endl;
+	// We have reached the end of the input.
+	// Decrypt the product of the ciphertexts. This is equal to the sum of the plaintexts.
+	paillier_plaintext_t* sum = paillier_dec(NULL, pub, prv, product);
+	// Print out the election results.
+	cout << "Here are the election results:\n";
+	for(int c = 0; c < numCandidates; ++c){
+		cout << "Candidate " << (c + 1) << ": ";
+		// Ultimately, we want floor(({product} mod (({number of voters}+1)^(c+1)))/(({number of voters}+1)^c)).
+		// Let's start with ({number of voters}+1)^(c+1).
+		mpz_t next_place_value;
+		mpz_init(next_place_value);
+		mpz_ui_pow_ui(next_place_value, numVotersPlusOne, c + 1);
+		// We're left with floor(({product} mod next_place_value)/(({number of voters}+1)^c)).
+		// Let's get ({number of voters}+1)^c.
+		// TODO: we can cache next_place_value from the last iteration and use it here
+		mpz_t this_place_value;
+		mpz_init(this_place_value);
+		mpz_ui_pow_ui(this_place_value, numVotersPlusOne, c);
+		// We're left with floor(({product} mod next_place_value)/this_place_value).
+		// Let's get {product} mod next_place_value.
+		mpz_t x;
+		mpz_init(x);
+		mpz_mod(x, sum->m, next_place_value);
+		// We're left with floor(x/this_place_value).
+		// Let's get it.
+		mpz_fdiv_q(x, x, this_place_value);
+		// Print the result.
+		mpz_out_str(stdout, 10, x);
+		cout << " vote(s)\n";
+		// Clean up.
+		mpz_clear(next_place_value);
+		mpz_clear(this_place_value);
+		mpz_clear(x);
+	}
+	cout << endl;
+	paillier_freeciphertext(product);
+	paillier_freeplaintext(sum);
 	return 0;
 }

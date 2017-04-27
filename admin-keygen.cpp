@@ -25,6 +25,9 @@ int main(){
 	cout << "Enter a name for this election: ";
 	cout.flush();
 	getline(cin, electionName);
+	if(electionName.find_first_of("\"!") < string::npos){
+		cout << "Warning: a quotation mark or exclamation point in the election name may cause problems when retrieving votes over IMAP.\n";
+	}
 	cout << "What e-mail address will you be monitoring for incoming votes? ";
 	cout.flush();
 	getline(cin, electionEmailAddress);

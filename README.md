@@ -12,7 +12,7 @@ This repository includes five programs, each of which is explained below.
 Run this program to input the number of candidates and the maximum number of voters. The program will also ask you to name the election and to specify an e-mail address to which encrypted votes should be sent. A public/private key pair is generated and saved to the disk as `public-key.txt` and `private-key.txt`. The public key file also contains the number of candidates, the maximum number of voters, the name of the election, and the e-mail address.
 
 ## admin-tokens
-Run this program to generate some random tokens. This program guarantees that all of the generated tokens are unique. Tokens are saved to a file on the disk called `tokens.txt`. You can open this text file in a text editor to see the tokens and send them to voters. Note that this program does not check that the number of tokens generated is less than the maximum number of voters specified to `admin-keygen`.
+Run this program to generate the random voter ID tokens. This program guarantees that all of the generated tokens are unique. Tokens are saved to a file on the disk called `tokens.txt`. You can open this text file in a text editor to see the tokens and send them to voters.
 
 ## cast-vote
 Once `admin-keygen` and `admin-tokens` have been run, distribute the following to each voter:

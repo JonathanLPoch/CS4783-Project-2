@@ -40,6 +40,7 @@ int main(){
 		cerr << "The public key file is missing or corrupt.\n";
 		return 2;
 	}
+	cout << "You are voting in the election: " << electionName << '\n' << endl;
 	// Prompt the user for the voter token. The token should be represented as a base 10 number.
 	// There may be dashes every few digits to make it easier for the user to enter, but they
 	// will be removed from the string here.

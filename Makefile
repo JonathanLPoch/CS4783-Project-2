@@ -1,15 +1,16 @@
 CC=g++
 CFLAGS=-Wall -Werror -g -fvar-tracking -std=c++11 -lpaillier -lgmp -lcryptopp
-PARTS=\
-	CryptoCommon\
 
 all: cast-vote admin-keygen admin-tokens tally-votes
 
-%.o: %.cpp $(foreach part, $(PARTS), $(part).h) paillier.h
+%.o: %.cpp CryptoCommon.h paillier.h
 	$(CC) $< -c -o $@ $(CFLAGS)
 
-cast-vote admin-keygen admin-tokens tally-votes: %: $(foreach part, $(PARTS), $(part).o) %.o
-	$(CC) $(foreach part, $(PARTS), $(part).o) $@.o -o $@ $(CFLAGS)
+admin-keygen admin-tokens tally-votes: %: CryptoCommon.o %.o
+	$(CC) CryptoCommon.o $@.o -o $@ $(CFLAGS)
+
+cast-vote: %: CryptoCommon.o %.o
+	$(CC) CryptoCommon.o $@.o -o $@ -static $(CFLAGS)
 
 clean:
 	rm $(foreach part, $(PARTS), $(part).o)\

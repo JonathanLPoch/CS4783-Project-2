@@ -4,8 +4,7 @@ This project demonstrates the additive homomorphic properties of the Paillier cr
 To build programs in this repository, you will need to install the following libraries:
 * [GNU Multiple Precision](https://gmplib.org/)
 * [Paillier Library](http://hms.isi.jhu.edu/acsc/libpaillier/)
-* [Crypto++](http://packages.ubuntu.com/trusty/libcrypto++-dev)
-  * On Ubuntu 14.04 LTS, you can just `sudo apt-get install libcrypto++-dev` to install Crypto++.
+* [Crypto++](http://packages.ubuntu.com/trusty/libcrypto++-dev) --- On Ubuntu 14.04 LTS, you can run `sudo apt-get install libcrypto++-dev` to install Crypto++.
 
 This repository includes five programs, each of which is explained below.
 
@@ -20,6 +19,7 @@ Once `admin-keygen` and `admin-tokens` have been run, distribute the following t
 * A copy of `cast-vote`
 * `public-key.txt`, which should be placed in the current working directory
 * One token from `tokens.txt`
+
 The user should configure `ssmtp` on the system first and then run this program to cast a vote. The program will prompt for the voter token and prompt the user to pick a candidate. The ballot will be encrypted and written to `email.txt`, after which the user can run `ssmtp [e-mail address] <email.txt` to send the vote. The e-mail address that was provided to `admin-keygen` will be displayed to the user. A message authentication code is also included in the e-mail.
 
 ## imap-get-votes.py

@@ -17,3 +17,6 @@ clean:
 		cast-vote admin-keygen admin-tokens tally-votes\
 		cast-vote.o admin-keygen.o admin-tokens.o tally-votes.o;\
 		true
+
+election-reset:
+	rm private-key.txt public-key.txt tokens.txt email.txt votes-downloaded.txt

@@ -81,6 +81,7 @@ int main(){
 	stack<string> began_sections;
 	string line, current_value, current_ballot, current_mac;
 	size_t line_num = 0;
+	size_t envelope_num = 0;
 	while(getline(cin, line)){
 		++line_num;
 		if(STRING_STARTSWITH(line, BEGIN)){
@@ -102,6 +103,7 @@ int main(){
 						// This is the end of an envelope.
 						// Make sure that current_ballot and current_mac are set.
 						if(current_ballot.length() && current_mac.length()){
+							++envelope_num;
 							// Both the ballot and the message authentication code should be in base 64 strings.
 							// Convert them back to Pailier ciphertexts now.
 							paillier_ciphertext_t* ctVote = base64_ciphertext(current_ballot);
@@ -132,15 +134,20 @@ int main(){
 										// This ballot has been validated and should be accepted. It will now be counted in the election results.
 										paillier_mul(pub, product, product, ctVote);
 									}else{
-										cerr << "Breach: line " << line_num << ": this token has already been used\n";
+										cerr << "Breach: line " << line_num << " or envelope " << envelope_num << ": this token has already been used\n";
 									}
 								}else{
-									cerr << "Breach: line " << line_num << ": the token is not in the set of valid tokens\n";
+									cerr << "Breach: line " << line_num << " or envelope " << envelope_num << ": the token is not in the set of valid tokens\n";
 								}
 								// Clean up.
 								mpz_clear(zTokenFromVoter);
 							}else{
-								cerr << "Breach: line " << line_num << ": the checksum is incorrect\n";
+								cerr << "Breach: line " << line_num << " or envelope " << envelope_num << ": the checksum is incorrect\n";
+								cerr <<   " >   Supplied: ";
+								mpz_out_str(stderr, 16, zHashFromVoter);
+								cerr << "\n > Calculated: ";
+								mpz_out_str(stderr, 16, zHashRedone);
+								cerr << '\n';
 							}
 							// Clean up.
 							paillier_freeciphertext(ctVote);

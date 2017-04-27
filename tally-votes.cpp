@@ -81,7 +81,7 @@ int main(){
 	stack<string> began_sections;
 	string line, current_value, current_ballot, current_mac;
 	size_t line_num = 0;
-	size_t envelope_num = 0;
+	unsigned long int envelope_num = 0;
 	while(getline(cin, line)){
 		++line_num;
 		if(STRING_STARTSWITH(line, BEGIN)){
@@ -181,6 +181,9 @@ int main(){
 	// We have reached the end of the input.
 	// Decrypt the product of the ciphertexts. This is equal to the sum of the plaintexts.
 	paillier_plaintext_t* sum = paillier_dec(NULL, pub, prv, product);
+	// Keep track of the total number of votes.
+	mpz_t zTotalVotes;
+	mpz_init(zTotalVotes);
 	// Print out the election results.
 	cout << "Here are the election results:\n";
 	for(int c = 0; c < numCandidates; ++c){
@@ -204,6 +207,8 @@ int main(){
 		// We're left with floor(x/this_place_value).
 		// Let's get it.
 		mpz_fdiv_q(x, x, this_place_value);
+		// Add this to the total number of votes.
+		mpz_add(zTotalVotes, zTotalVotes, x);
 		// Print the result.
 		mpz_out_str(stdout, 10, x);
 		cout << " vote(s)\n";
@@ -213,6 +218,16 @@ int main(){
 		mpz_clear(x);
 	}
 	cout << endl;
+	// Check that the total number of votes from all candidates is equal to the number of votes.
+	cout <<   "    Total votes from all candidates: ";
+	mpz_out_str(stdout, 10, zTotalVotes);
+	cout << "\n               Total votes received: " << envelope_num << '\n';
+	if(mpz_cmp_ui(zTotalVotes, envelope_num) != 0){
+		cout << "Warning! The two values above do not match. The election results cannot be trusted.\n";
+	}
+	cout << endl;
+	// Clean up.
+	mpz_clear(zTotalVotes);
 	paillier_freeciphertext(product);
 	paillier_freeplaintext(sum);
 	return 0;

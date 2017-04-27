@@ -38,10 +38,20 @@ In a high-stakes election, users are highly motivated to change the results. Eve
 The election administrator uses `admin-keygen` and `admin-tokens` to generate a public/private key pair and a unique token for each voter. The token should be kept secure. When a vote with an unauthorized token is submitted, `tally-votes` prints a message and does not count the vote.
 
 ### Seeing other people's votes
-The secrecy of the ballot is key to a fair election because it makes retaliation impractical. `cast-vote` encrypts votes with a 2048-bit public key. When the vote is transmitted over e-mail, it is encrypted, and users can add an additional layer of protection by configuring `ssmtp` to use an SMTP server that supports STARTTLS. Once the vote arrives on the computer of the election administrator, however, it still does not need to be decrypted. Because of the additive homomorphic properties of the Paillier cryptosystem, `tally-votes` can tell you how many votes each candidate got without decrypting any individual vote.
+The secrecy of the ballot is key to a fair election because it makes retaliation impractical. `cast-vote` encrypts votes with a 2048-bit public key. The Paillier encryption algorithm adds a random value before encrypting, so two votes for the same candidate do not have the same ciphertext.
+
+When the vote is transmitted over e-mail, it is encrypted, and users can add an additional layer of protection by configuring `ssmtp` to use an SMTP server that supports STARTTLS. Once the vote arrives on the computer of the election administrator, however, it still does not need to be decrypted. Because of the additive homomorphic properties of the Paillier cryptosystem, `tally-votes` can tell you how many votes each candidate got without decrypting any individual vote.
 
 ### Modifying other people's votes
 After encrypting a vote, `cast-vote` generates a SHA-256 checksum of the encrypted vote. This checksum is concatenated with the voter ID token, and the result is encrypted and sent with the encrypted vote. If a vote has been modified, the SHA-256 checksum will fail to verify; in this event, `tally-votes` prints a message and does not count the vote. The election administrator may issue a new token and contact the voter to resubmit.
 
 ### Submitting a valid vote more than once
 People sometimes accidentally send e-mails twice, but that's okay. When two votes are submitted with the same token, `tally-votes` prints a message and only counts the first vote.
+
+### Submitting a ballot with more than one vote
+Mathematically, it is possible to send a single ballot with one of the following irregularities:
+* At least one candidate has more than one vote
+* More than one candidate has a vote
+* Both of the above
+
+There is a simple way to check for this, though: the total number of votes for all candidates should equal the number of ballots received. This check is performed by `tally-votes` at the very end. If the two numbers do not match, the election results cannot be trusted.

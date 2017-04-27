@@ -1,5 +1,11 @@
-# CS4783-Project-2
+# CS4783 Project 2
 This project demonstrates the additive homomorphic properties of the Paillier cryptosystem by tallying up the results of an election without decrypting any individual vote. Ballots are transmitted via e-mail; they are sent with SMTP and retrieved with IMAP. This means that the transmission of voting data can travel on the existing infrastructure of the public Internet, simplifying greatly the collection of ballots. This system was tested with free e-mail accounts from Microsoft's Outlook.com and Google's Gmail. Only e-mails with the name of the election in the subject line are processed, so existing e-mail accounts can be used.
+
+To build programs in this repository, you will need to install the following libraries:
+* [GNU Multiple Precision](https://gmplib.org/)
+* [Paillier Library](http://hms.isi.jhu.edu/acsc/libpaillier/)
+* [Crypto++](http://packages.ubuntu.com/trusty/libcrypto++-dev)
+  * On Ubuntu 14.04 LTS, you can just `sudo apt-get install libcrypto++-dev` to install Crypto++.
 
 This repository includes five programs, each of which is explained below.
 

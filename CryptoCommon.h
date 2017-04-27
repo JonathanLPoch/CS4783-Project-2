@@ -21,6 +21,7 @@ bool sanitize_voter_token(std::string& str_voter_token);
 
 // Reads the public key as well as the numbers of voters and candidates from a file.
 bool read_pubkey_from_file(int& numCandidates, int& numVotersPlusOne, paillier_pubkey_t** pub);
+bool read_pubkey_from_file(int& numCandidates, int& numVotersPlusOne, paillier_pubkey_t** pub, std::string& electionName, std::string& electionEmailAddress);
 
 // Reads the private key from a file. Pass in pub, and prv will be set.
 bool read_prvkey_from_file(paillier_pubkey_t* pub, paillier_prvkey_t** prv);

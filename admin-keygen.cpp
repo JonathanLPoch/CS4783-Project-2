@@ -18,8 +18,16 @@ bool public_key_big_enough(int numVoters, int numCandidates, paillier_pubkey_t* 
 }
 
 int main(){
-	int numCandidates, numVoters;
 	cout << "This program will set up the election." << endl;
+	// Get some basic information from the user.
+	string electionName, electionEmailAddress;
+	int numCandidates, numVoters;
+	cout << "Enter a name for this election: ";
+	cout.flush();
+	getline(cin, electionName);
+	cout << "What e-mail address will you be monitoring for incoming votes? ";
+	cout.flush();
+	getline(cin, electionEmailAddress);
 	cout << "At most, how many candidates will there be? ";
 	cout.flush();
 	cin >> numCandidates;
@@ -42,8 +50,16 @@ int main(){
 	// Save the public key along with the numbers of candidates and voters to a file.
 	ofstream ofspub(KEY_FILE_PUBLIC);
 	if(ofspub){
+		// The public key file should be distributed with cast-votes to voters.
+		// The format of the public key file is as follows:
+		// Line 1: the public key as exported by paillier_pubkey_to_hex
+		// Line 2: the number of candidates
+		// Line 3: the number of voters plus one
+		// Line 4: the name of the election
+		// Line 5: the e-mail address to which encrypted votes should be sent
 		ofspub << paillier_pubkey_to_hex(pub) << endl;
-		ofspub << numCandidates << '\n' << (numVoters + 1) << endl;
+		ofspub << numCandidates << '\n' << (numVoters + 1) << '\n'
+			<< electionName << '\n' << electionEmailAddress << endl;
 		ofspub.close();
 	}else{
 		cerr << "Warning: could not write file for public key.\n";
@@ -59,6 +75,6 @@ int main(){
 	// Clean up.
 	paillier_freepubkey(pub);
 	paillier_freeprvkey(prv);
-	cout << "This process has completed." << endl;
+	cout << "This process has completed. Send " << KEY_FILE_PUBLIC << " and cast-votes to the voters." << endl;
 	return 0;
 }

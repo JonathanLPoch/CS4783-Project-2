@@ -66,7 +66,7 @@ bool sanitize_voter_token(string& str_voter_token){
 	return true;
 }
 
-bool read_pubkey_from_file(int& numCandidates, int& numVotersPlusOne, paillier_pubkey_t** pub){
+bool read_pubkey_from_file(int& numCandidates, int& numVotersPlusOne, paillier_pubkey_t** pub, string& electionName, string& electionEmailAddress){
 	ifstream ifspub(KEY_FILE_PUBLIC);
 	if(!ifspub){
 		return false;
@@ -75,12 +75,19 @@ bool read_pubkey_from_file(int& numCandidates, int& numVotersPlusOne, paillier_p
 	ifspub.getline(pubHex, KEY_LENGTH_HEX + 1);
 	ifspub >> numCandidates;
 	ifspub >> numVotersPlusOne;
+	ifspub.ignore();
+	getline(ifspub, electionName);
+	getline(ifspub, electionEmailAddress);
 	ifspub.close();
 	if(numCandidates < 2 || numVotersPlusOne < 2){
 		return false;
 	}
 	*pub = paillier_pubkey_from_hex(pubHex);
 	return true;
+}
+bool read_pubkey_from_file(int& numCandidates, int& numVotersPlusOne, paillier_pubkey_t** pub){
+	string electionName, electionEmailAddress;
+	return read_pubkey_from_file(numCandidates, numVotersPlusOne, pub, electionName, electionEmailAddress);
 }
 
 bool read_prvkey_from_file(paillier_pubkey_t* pub, paillier_prvkey_t** prv){

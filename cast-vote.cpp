@@ -1,14 +1,42 @@
+#include <fstream>
 #include <iostream>
 #include <string>
 #include "CryptoCommon.h"
+#define EMAIL_TXT "email.txt"
 using namespace std;
+
+void print_envelope(ostream& os, int numVotersPlusOne, int zCandidate, const mpz_t& zVoterToken, paillier_pubkey_t* pub){
+	// The vote is stored as {number of voters + 1}^{# of candidate - 1}.
+	paillier_plaintext_t* ptVote = paillier_plaintext_from_ui(numVotersPlusOne);
+	mpz_pow_ui(ptVote->m, ptVote->m, zCandidate - 1);
+	// Encrypt the vote.
+	paillier_ciphertext_t* ctVote = paillier_enc(NULL, pub, ptVote, paillier_get_rand_devurandom);
+	os << "BEGIN:ENVELOPE\nBEGIN:BALLOT\n" << ciphertext_base64(ctVote) << "END:BALLOT" << endl;
+	// Get the SHA-256 sum of the ciphertext.
+	mpz_t checksum;
+	ciphertext_sha256(checksum, ctVote);
+	// Create an authenticity value, which is the voter token bitshifted 256 bits to the left + the SHA-256 sum.
+	paillier_plaintext_t* ptAuthentic = paillier_plaintext_from_ui(0);
+	mpz_mul_2exp(ptAuthentic->m, zVoterToken, 256);
+	mpz_add(ptAuthentic->m, ptAuthentic->m, checksum);
+	// Encrypt the authenticity value.
+	paillier_ciphertext_t* ctAuthentic = paillier_enc(NULL, pub, ptAuthentic, paillier_get_rand_devurandom);
+	os << "BEGIN:MAC\n" << ciphertext_base64(ctAuthentic) << "END:MAC\nEND:ENVELOPE" << endl;
+	// Clean up.
+	paillier_freeplaintext(ptVote);
+	paillier_freeciphertext(ctVote);
+	paillier_freeplaintext(ptAuthentic);
+	paillier_freeciphertext(ctAuthentic);
+	mpz_clear(checksum);
+}
 
 int main(){
 	cout << "Welcome! ";
 	// Read the public key from a file.
+	string electionName, electionEmailAddress;
 	int numCandidates, numVotersPlusOne;
 	paillier_pubkey_t* pub;
-	if(!read_pubkey_from_file(numCandidates, numVotersPlusOne, &pub)){
+	if(!read_pubkey_from_file(numCandidates, numVotersPlusOne, &pub, electionName, electionEmailAddress)){
 		cerr << "The public key file is missing or corrupt.\n";
 		return 2;
 	}
@@ -18,7 +46,8 @@ int main(){
 	string strVoterToken;
 	cout << "Please enter your voter ID code (dashes optional):\n>>> ";
 	cout.flush();
-	cin >> strVoterToken;
+	getline(cin, strVoterToken);
+	cout << '\n';
 	// Remove hyphens from the voter token.
 	if(!sanitize_voter_token(strVoterToken)){
 		// Non-numeric characters, other than hyphens, were found!
@@ -60,30 +89,23 @@ int main(){
 		while(cin.get() != '\n');
 	}while(confirmation != 'y' && confirmation != 'Y');
 	cout << '\n';
-	// The vote is stored as {number of voters + 1}^{# of candidate - 1}.
-	paillier_plaintext_t* ptVote = paillier_plaintext_from_ui(numVotersPlusOne);
-	mpz_pow_ui(ptVote->m, ptVote->m, zCandidate - 1);
-	// Encrypt the vote.
-	paillier_ciphertext_t* ctVote = paillier_enc(NULL, pub, ptVote, paillier_get_rand_devurandom);
-	cout << "BEGIN:ENVELOPE\nBEGIN:BALLOT\n" << ciphertext_base64(ctVote) << "END:BALLOT" << endl;
-	// Get the SHA-256 sum of the ciphertext.
-	mpz_t checksum;
-	ciphertext_sha256(checksum, ctVote);
-	// Create an authenticity value, which is the voter token bitshifted 256 bits to the left + the SHA-256 sum.
-	paillier_plaintext_t* ptAuthentic = paillier_plaintext_from_ui(0);
-	mpz_mul_2exp(ptAuthentic->m, zVoterToken, 256);
-	mpz_add(ptAuthentic->m, ptAuthentic->m, checksum);
-	// Encrypt the authenticity value.
-	paillier_ciphertext_t* ctAuthentic = paillier_enc(NULL, pub, ptAuthentic, paillier_get_rand_devurandom);
-	cout << "BEGIN:MAC\n" << ciphertext_base64(ctAuthentic) << "END:MAC\nEND:ENVELOPE" << endl;
+	// Open a file for writing the encrypted ballot and authenticity value.
+	ofstream ofsEmail(EMAIL_TXT);
+	if(ofsEmail){
+		ofsEmail << "Subject: Vote: " << electionName << "\n\n";
+		print_envelope(ofsEmail, numVotersPlusOne, zCandidate, zVoterToken, pub);
+		ofsEmail.close();
+		cout << "Your vote was successfully encrypted. To send your vote, run the following command:\n"
+			<< "    ssmtp " << electionEmailAddress << " <" << EMAIL_TXT << endl;
+	}else{
+		cout << "A text file could not be created in the current directory!\n"
+			<< "You can manually send your vote via e-mail. Just send the following contents to " << electionEmailAddress << ".\n"
+			<< "Use \"Vote: " << electionName << "\" as the subject.\n\n";
+		print_envelope(cout, numVotersPlusOne, zCandidate, zVoterToken, pub);
+	}
 	// Clean up.
 	// TODO: also clean up when something fails above
 	mpz_clear(zVoterToken);
-	mpz_clear(checksum);
 	paillier_freepubkey(pub);
-	paillier_freeplaintext(ptVote);
-	paillier_freeciphertext(ctVote);
-	paillier_freeplaintext(ptAuthentic);
-	paillier_freeciphertext(ctAuthentic);
 	return 0;
 }

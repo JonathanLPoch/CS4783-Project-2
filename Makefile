@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-Wall -Werror -g -fvar-tracking -std=c++11 -lpaillier -lgmp -lcryptopp
+CFLAGS=-Wall -Werror -O3 -std=c++11 -lpaillier -lgmp -lcryptopp
 
 all: cast-vote admin-keygen admin-tokens tally-votes
 

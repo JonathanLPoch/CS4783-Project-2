@@ -55,3 +55,5 @@ Mathematically, it is possible to send a single ballot with one of the following
 * Both of the above
 
 There is a simple way to check for this, though: the total number of votes for all candidates should equal the number of ballots received. This check is performed by `tally-votes` at the very end. If the two numbers do not match, the election results cannot be trusted.
+
+In addition, `cast-vote` actually includes a reverse ballot. If `tally-votes` processes the reverse ballot like it does the regular ballot, then the result is the same as the regular result, except that the candidates are reversed. For example, suppose that, from the regular ballots, candidate A gets 5 votes, candidate B gets 4 votes, candidate C gets 3 votes, and candidate D gets 2 votes; from the reverse ballots, candidate A gets 2 votes, candidate B gets 3 votes, candidate C gets 4 votes, and candidate D gets 4 votes. If the results from the reverse ballots are reversed again, they should match the results from the regular ballots. If they do not match, the election results cannot be trusted.

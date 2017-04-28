@@ -5,29 +5,36 @@
 #define EMAIL_TXT "email.txt"
 using namespace std;
 
-void print_envelope(ostream& os, int numVotersPlusOne, int zCandidate, const mpz_t& zVoterToken, paillier_pubkey_t* pub){
+void print_envelope(ostream& os, int numCandidates, int numVotersPlusOne, int zCandidate, const mpz_t& zVoterToken, paillier_pubkey_t* pub){
 	// The vote is stored as {number of voters + 1}^{# of candidate - 1}.
 	paillier_plaintext_t* ptVote = paillier_plaintext_from_ui(numVotersPlusOne);
 	mpz_pow_ui(ptVote->m, ptVote->m, zCandidate - 1);
 	// Encrypt the vote.
 	paillier_ciphertext_t* ctVote = paillier_enc(NULL, pub, ptVote, paillier_get_rand_devurandom);
 	os << "BEGIN:ENVELOPE\nBEGIN:BALLOT\n" << ciphertext_base64(ctVote) << "END:BALLOT" << endl;
+	paillier_freeplaintext(ptVote);
+	// The backwards vote is {number of voters + 1}^({number of candidates} - {# of candidate}).
+	paillier_plaintext_t* ptVoteReversed = paillier_plaintext_from_ui(numVotersPlusOne);
+	mpz_pow_ui(ptVoteReversed->m, ptVoteReversed->m, numCandidates - zCandidate);
+	// Encrypt the backwards vote.
+	paillier_ciphertext_t* ctVoteReversed = paillier_enc(NULL, pub, ptVoteReversed, paillier_get_rand_devurandom);
+	os << "BEGIN:RBALLOT\n" << ciphertext_base64(ctVoteReversed) << "END:RBALLOT" << endl;
+	paillier_freeplaintext(ptVoteReversed);
+	paillier_freeciphertext(ctVoteReversed);
 	// Get the SHA-256 sum of the ciphertext.
 	mpz_t checksum;
 	ciphertext_sha256(checksum, ctVote);
+	paillier_freeciphertext(ctVote);
 	// Create an authenticity value, which is the voter token bitshifted 256 bits to the left + the SHA-256 sum.
 	paillier_plaintext_t* ptAuthentic = paillier_plaintext_from_ui(0);
 	mpz_mul_2exp(ptAuthentic->m, zVoterToken, 256);
 	mpz_add(ptAuthentic->m, ptAuthentic->m, checksum);
+	mpz_clear(checksum);
 	// Encrypt the authenticity value.
 	paillier_ciphertext_t* ctAuthentic = paillier_enc(NULL, pub, ptAuthentic, paillier_get_rand_devurandom);
 	os << "BEGIN:MAC\n" << ciphertext_base64(ctAuthentic) << "END:MAC\nEND:ENVELOPE" << endl;
-	// Clean up.
-	paillier_freeplaintext(ptVote);
-	paillier_freeciphertext(ctVote);
 	paillier_freeplaintext(ptAuthentic);
 	paillier_freeciphertext(ctAuthentic);
-	mpz_clear(checksum);
 }
 
 int main(){
@@ -94,7 +101,7 @@ int main(){
 	ofstream ofsEmail(EMAIL_TXT);
 	if(ofsEmail){
 		ofsEmail << "Subject: Vote: " << electionName << "\n\n";
-		print_envelope(ofsEmail, numVotersPlusOne, zCandidate, zVoterToken, pub);
+		print_envelope(ofsEmail, numCandidates, numVotersPlusOne, zCandidate, zVoterToken, pub);
 		ofsEmail.close();
 		cout << "Your vote was successfully encrypted. To send your vote, run the following command:\n"
 			<< "    ssmtp " << electionEmailAddress << " <" << EMAIL_TXT << endl;
@@ -102,7 +109,7 @@ int main(){
 		cout << "A text file could not be created in the current directory!\n"
 			<< "You can manually send your vote via e-mail. Just send the following contents to " << electionEmailAddress << ".\n"
 			<< "Use \"Vote: " << electionName << "\" as the subject.\n\n";
-		print_envelope(cout, numVotersPlusOne, zCandidate, zVoterToken, pub);
+		print_envelope(cout, numCandidates, numVotersPlusOne, zCandidate, zVoterToken, pub);
 	}
 	// Clean up.
 	// TODO: also clean up when something fails above

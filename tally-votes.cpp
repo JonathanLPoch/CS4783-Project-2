@@ -68,26 +68,28 @@ int main(){
 		cerr << "The file containing tokens is missing.\n";
 		return 3;
 	}
-	// Get 2^256.
-	mpz_t z2to256;
-	mpz_init_set_ui(z2to256, 1);
-	mpz_mul_2exp(z2to256, z2to256, 256);
 	// This variable will accumulate the election results.
 	// The Paillier cryptosystem has additive homomorphism. A product of two ciphertexts is equal to the ciphertext of the sum of the two plaintexts.
 	// Every ballot will be multiplied with this variable.
 	paillier_ciphertext_t* product = paillier_create_enc_zero();
+	// For integrity, we also want the product with the digits reversed, assuming the radix is the number of voters plus one.
+	paillier_ciphertext_t* productReversed = paillier_create_enc_zero();
 	// Start tallying votes from standard input.
 	cerr << "Reading votes from stdin...\n";
 	stack<string> began_sections;
-	string line, current_value, current_ballot, current_mac;
+	string line, current_value, current_ballot, current_rballot, current_mac;
 	size_t line_num = 0;
 	unsigned long int envelope_num = 0;
 	while(getline(cin, line)){
 		++line_num;
 		if(STRING_STARTSWITH(line, BEGIN)){
 			// This is the beginning of a section.
-			began_sections.push(line.substr(BEGIN.length()));
+			string tag = line.substr(BEGIN.length());
+			began_sections.push(tag);
 			current_value = "";
+			if(tag == "ENVELOPE"){
+				current_ballot = current_rballot = current_mac = "";
+			}
 		}else if(STRING_STARTSWITH(line, END)){
 			// This is the end of a section.
 			// Make sure that at least one section is open.
@@ -102,11 +104,12 @@ int main(){
 					if(tag == "ENVELOPE"){
 						// This is the end of an envelope.
 						// Make sure that current_ballot and current_mac are set.
-						if(current_ballot.length() && current_mac.length()){
+						if(current_ballot.length() && current_rballot.length() && current_mac.length()){
 							++envelope_num;
-							// Both the ballot and the message authentication code should be in base 64 strings.
+							// The ballot, the backwards ballot, and the message authentication code should be in base 64 strings.
 							// Convert them back to Pailier ciphertexts now.
 							paillier_ciphertext_t* ctVote = base64_ciphertext(current_ballot);
+							paillier_ciphertext_t* ctVoteReversed = base64_ciphertext(current_rballot);
 							paillier_ciphertext_t* ctAuthentic = base64_ciphertext(current_mac);
 							// Decrypt the message authentication code.
 							paillier_plaintext_t* ptAuthentic = paillier_dec(NULL, pub, prv, ctAuthentic);
@@ -114,7 +117,7 @@ int main(){
 							// Get the lower 256 bits of this plaintext; it should be a SHA-256 sum.
 							mpz_t zHashFromVoter;
 							mpz_init(zHashFromVoter);
-							mpz_mod(zHashFromVoter, ptAuthentic->m, z2to256);
+							mpz_tdiv_r_2exp(zHashFromVoter, ptAuthentic->m, 256);
 							// Recalculate the SHA-256 sum of the encrypted ballot.
 							mpz_t zHashRedone;
 							ciphertext_sha256(zHashRedone, ctVote);
@@ -133,6 +136,7 @@ int main(){
 										tokens_used.insert(bTokenFromVoter);
 										// This ballot has been validated and should be accepted. It will now be counted in the election results.
 										paillier_mul(pub, product, product, ctVote);
+										paillier_mul(pub, productReversed, productReversed, ctVoteReversed);
 									}else{
 										cerr << "Breach: line " << line_num << " or envelope " << envelope_num << ": this token has already been used\n";
 									}
@@ -151,20 +155,22 @@ int main(){
 							}
 							// Clean up.
 							paillier_freeciphertext(ctVote);
+							paillier_freeciphertext(ctVoteReversed);
 							paillier_freeplaintext(ptAuthentic);
 							mpz_clear(zHashFromVoter);
 							mpz_clear(zHashRedone);
 						}else{
-							cerr << "Error: line " << line_num << ": envelope is missing ballot and/or MAC\n";
+							cerr << "Error: line " << line_num << ": envelope is missing ballot, reverse ballot, and/or MAC\n";
 						}
 					}else if(tag == "BALLOT"){
 						// Store the ballot in a string.
 						current_ballot = move(current_value);
-						current_value = "";
+					}else if(tag == "RBALLOT"){
+						// Store the backwards ballot in a string.
+						current_rballot = move(current_value);
 					}else if(tag == "MAC"){
 						// Store the message authentication code in a string.
 						current_mac = move(current_value);
-						current_value = "";
 					}else{
 						cerr << "Error: line " << line_num << ": unknown tag " << tag << '\n';
 					}
@@ -176,18 +182,20 @@ int main(){
 			current_value += line;
 		}
 	}
-	mpz_clear(z2to256);
-	cout << endl;
 	// We have reached the end of the input.
 	// Decrypt the product of the ciphertexts. This is equal to the sum of the plaintexts.
 	paillier_plaintext_t* sum = paillier_dec(NULL, pub, prv, product);
+	paillier_plaintext_t* sumReversed = paillier_dec(NULL, pub, prv, productReversed);
+	paillier_freeciphertext(product);
+	paillier_freeciphertext(productReversed);
 	// Keep track of the total number of votes.
 	mpz_t zTotalVotes;
 	mpz_init(zTotalVotes);
-	// Print out the election results.
-	cout << "Here are the election results:\n";
+	// Find the number of votes for each candidate.
+	cout << "Computing election results...\n" << endl;
+	mpz_t tally[numCandidates];
+	mpz_t tallyReversed[numCandidates];
 	for(int c = 0; c < numCandidates; ++c){
-		cout << "Candidate " << (c + 1) << ": ";
 		// Ultimately, we want floor(({product} mod (({number of voters}+1)^(c+1)))/(({number of voters}+1)^c)).
 		// Let's start with ({number of voters}+1)^(c+1).
 		mpz_t next_place_value;
@@ -201,34 +209,52 @@ int main(){
 		mpz_ui_pow_ui(this_place_value, numVotersPlusOne, c);
 		// We're left with floor(({product} mod next_place_value)/this_place_value).
 		// Let's get {product} mod next_place_value.
-		mpz_t x;
-		mpz_init(x);
-		mpz_mod(x, sum->m, next_place_value);
-		// We're left with floor(x/this_place_value).
+		mpz_init(tally[c]);
+		mpz_mod(tally[c], sum->m, next_place_value);
+		// We're left with floor(tally[c]/this_place_value).
 		// Let's get it.
-		mpz_fdiv_q(x, x, this_place_value);
-		// Add this to the total number of votes.
-		mpz_add(zTotalVotes, zTotalVotes, x);
-		// Print the result.
-		mpz_out_str(stdout, 10, x);
-		cout << " vote(s)\n";
+		mpz_fdiv_q(tally[c], tally[c], this_place_value);
+		// Repeat the last three steps for the backwards product.
+		mpz_init(tallyReversed[c]);
+		mpz_mod(tallyReversed[c], sumReversed->m, next_place_value);
+		mpz_fdiv_q(tallyReversed[c], tallyReversed[c], this_place_value);
+		// Add this tally to the total number of votes.
+		mpz_add(zTotalVotes, zTotalVotes, tally[c]);
 		// Clean up.
 		mpz_clear(next_place_value);
 		mpz_clear(this_place_value);
-		mpz_clear(x);
 	}
-	cout << endl;
+	paillier_freeplaintext(sum);
+	paillier_freeplaintext(sumReversed);
+	// Print out the election results.
+	cout << "Here are the election results:\n";
+	bool bTamperDetected = false;
+	for(int c = 0; c < numCandidates; ++c){
+		cout << "Candidate " << (c + 1) << ": ";
+		// Print the result.
+		mpz_out_str(stdout, 10, tally[c]);
+		cout << " vote(s)";
+		// Make sure that this candidate got the same number of votes in the regular and reverse ballots.
+		if(mpz_cmp(tally[c], tallyReversed[numCandidates - c - 1]) != 0){
+			cout << " - tamper detected!";
+			bTamperDetected = true;
+		}
+		cout << '\n';
+		// Clean up.
+		mpz_clear(tally[c]);
+		mpz_clear(tallyReversed[numCandidates - c - 1]);
+	}
 	// Check that the total number of votes from all candidates is equal to the number of votes.
-	cout <<   "    Total votes from all candidates: ";
+	cout << "\n    Total votes from all candidates: ";
 	mpz_out_str(stdout, 10, zTotalVotes);
 	cout << "\n               Total votes received: " << envelope_num << '\n';
 	if(mpz_cmp_ui(zTotalVotes, envelope_num) != 0){
 		cout << "Warning! The two values above do not match. The election results cannot be trusted.\n";
 	}
+	if(bTamperDetected){
+		cout << "Warning! At least one tally failed the reverse place value test. The election results cannot be trusted.\n";
+	}
 	cout << endl;
-	// Clean up.
 	mpz_clear(zTotalVotes);
-	paillier_freeciphertext(product);
-	paillier_freeplaintext(sum);
 	return 0;
 }

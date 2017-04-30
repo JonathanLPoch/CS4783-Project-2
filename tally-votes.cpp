@@ -224,8 +224,6 @@ int main(){
 		mpz_clear(next_place_value);
 		mpz_clear(this_place_value);
 	}
-	paillier_freeplaintext(sum);
-	paillier_freeplaintext(sumReversed);
 	// Print out the election results.
 	cout << "Here are the election results:\n";
 	bool bTamperDetected = false;
@@ -254,7 +252,22 @@ int main(){
 	if(bTamperDetected){
 		cout << "Warning! At least one tally failed the reverse place value test. The election results cannot be trusted.\n";
 	}
+	// The sum of the plaintexts must be less than or equal to the sum if all voters voted for the last candidate.
+	// Recall that the vote is stored as {number of voters + 1}^{# of candidate - 1}.
+	// If all voters for the last candidate, the sum of all votes is {number of voters + 1}^{number of candidates - 1}*{number of voters}.
+	mpz_t zSumMax;
+	mpz_init(zSumMax);
+	mpz_ui_pow_ui(zSumMax, numVotersPlusOne, numCandidates - 1);
+	mpz_mul_ui(zSumMax, zSumMax, numVotersPlusOne - 1);
+	// Make sure that both the sum and the reverse sum are less than zSumMax.
+	if(mpz_cmp(sum->m, zSumMax) > 0 || mpz_cmp(sumReversed->m, zSumMax) > 0){
+		cout << "Warning: more than " << numCandidates << " candidates were found. The election results cannot be trusted.\n";
+	}
+	// Clean up.
 	cout << endl;
+	paillier_freeplaintext(sum);
+	paillier_freeplaintext(sumReversed);
+	mpz_clear(zSumMax);
 	mpz_clear(zTotalVotes);
 	return 0;
 }

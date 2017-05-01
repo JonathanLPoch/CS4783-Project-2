@@ -14,6 +14,8 @@ Run this program to input the number of candidates and the maximum number of vot
 
 It is a good idea to specify a maximum number of voters greater than the actual number of voters. In the event that a voter ID token is compromised, a new one can be issued.
 
+You will not be asked to name the candidates; you need to assign each of the candidates a number starting from 1. Please inform your voters of which number is which candidate.
+
 ### admin-tokens
 Run this program to generate the random voter ID tokens. This program guarantees that all of the generated tokens are unique. Tokens are saved to a file on the disk called `tokens.txt`. You can open this text file in a text editor to see the tokens and send them to voters.
 
@@ -56,4 +58,7 @@ Mathematically, it is possible to send a single ballot with one of the following
 
 There is a simple way to check for this, though: the total number of votes for all candidates should equal the number of ballots received. This check is performed by `tally-votes` at the very end. If the two numbers do not match, the election results cannot be trusted.
 
-In addition, `cast-vote` actually includes a reverse ballot. If `tally-votes` processes the reverse ballot like it does the regular ballot, then the result is the same as the regular result, except that the candidates are reversed. For example, suppose that, from the regular ballots, candidate A gets 5 votes, candidate B gets 4 votes, candidate C gets 3 votes, and candidate D gets 2 votes; from the reverse ballots, candidate A gets 2 votes, candidate B gets 3 votes, candidate C gets 4 votes, and candidate D gets 4 votes. If the results from the reverse ballots are reversed again, they should match the results from the regular ballots. If they do not match, the election results cannot be trusted.
+In addition, `cast-vote` actually includes a reverse ballot. If `tally-votes` processes the reverse ballot like it does the regular ballot, then the result is the same as the regular result, except that the candidates are reversed. For example, suppose that, from the regular ballots, candidate A gets 5 votes, candidate B gets 4 votes, candidate C gets 3 votes, and candidate D gets 2 votes; from the reverse ballots, candidate A gets 2 votes, candidate B gets 3 votes, candidate C gets 4 votes, and candidate D gets 5 votes. If the results from the reverse ballots are reversed again, they should match the results from the regular ballots. If they do not match, the election results cannot be trusted.
+
+### Specifying additional candidates
+Although a user-specified candidate could not possibly be interpreted correctly because it is not a candidate that you specified, it should not be allowed. To detect this, `tally-votes` performs a quick check for unknown candidates and prints a warning if it finds any.

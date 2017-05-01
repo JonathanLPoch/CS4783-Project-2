@@ -1,5 +1,6 @@
 CC=g++
-CFLAGS=-Wall -Werror -O3 -std=c++11 -lpaillier -lgmp -lcryptopp
+CFLAGS=-Wall -Werror -O3 -std=c++11
+CLINK=-lpaillier -lgmp -lcryptopp
 
 all: cast-vote admin-keygen admin-tokens tally-votes
 
@@ -7,10 +8,10 @@ all: cast-vote admin-keygen admin-tokens tally-votes
 	$(CC) $< -c -o $@ $(CFLAGS)
 
 admin-keygen admin-tokens tally-votes: %: CryptoCommon.o %.o
-	$(CC) CryptoCommon.o $@.o -o $@ $(CFLAGS)
+	$(CC) CryptoCommon.o $@.o -o $@ $(CFLAGS) $(CLINK)
 
 cast-vote: %: CryptoCommon.o %.o
-	$(CC) CryptoCommon.o $@.o -o $@ -static $(CFLAGS)
+	$(CC) CryptoCommon.o $@.o -o $@ -static $(CFLAGS) $(CLINK)
 
 clean:
 	rm $(foreach part, $(PARTS), $(part).o)\

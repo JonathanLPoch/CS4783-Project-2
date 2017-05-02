@@ -22,6 +22,15 @@ if len(sys.argv) == 4:
                 # Decode the message.
                 message = email.message_from_bytes(data[0][1])
                 sender = message.get("From", "unknown party")
+                # If the message is a multipart message, find the one in plain text.
+                if message.is_multipart():
+                    for m in message.get_payload():
+                        if m.get_content_type().lower() == "text/plain":
+                            message = m
+                            break
+                if message.get_content_type().lower() != "text/plain":
+                    print(" > Could not find a text/plain part of this message. This vote will not be saved.")
+                    continue
                 # Write the vote to the file.
                 print("Saving vote from ", sender, "...", sep="")
                 votes_downloaded.write("Vote from ")
